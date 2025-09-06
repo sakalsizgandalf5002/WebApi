@@ -1,0 +1,15 @@
+# Build outputs
+bin/
+obj/
+
+# VS / Rider / VS Code ayarları
+.vs/
+.idea/
+*.user
+*.suo
+
+# Logs
+*.log
+
+# Publish
+out/

@@ -45,6 +45,9 @@ builder.Services.AddSwaggerGen(option =>
     });
 });
 
+builder.Services.Configure<Api.Security.PepperedPasswordHasher.Options>(
+    builder.Configuration.GetSection("Security"));
+
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
@@ -57,6 +60,9 @@ builder.Services.AddIdentity<AppUser, IdentityRole>(options =>
     options.Password.RequiredLength = 12;
 })
 .AddEntityFrameworkStores<AppDbContext>();
+
+builder.Services.AddScoped<IPasswordHasher<AppUser>, Api.Security.PepperedPasswordHasher>();
+
 
 builder.Services
     .AddAuthentication(options =>

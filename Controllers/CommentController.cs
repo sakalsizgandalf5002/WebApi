@@ -1,14 +1,11 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using Api.Interfaces;
 using Api.Models;
-using Api.Mappers;
 using Api.DTOs.Comment;
 using Microsoft.AspNetCore.Identity;
-using Api.Extensions;
+using Microsoft.AspNetCore.Authorization;
+using Api.Interfaces.IService;
+using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace Api.Controllers
 {
@@ -16,94 +13,88 @@ namespace Api.Controllers
     [ApiController]
     public class CommentController : ControllerBase
     {
-        private readonly ICommentRepo _commentRepo;
-        private readonly IStockRepo _stockRepo;
+        private readonly ICommentService _service;
         private readonly UserManager<AppUser> _userManager;
 
-        public CommentController(ICommentRepo commentRepo, IStockRepo stockRepo,
-            UserManager<AppUser> userManager)
+        public CommentController(ICommentService service, UserManager<AppUser> userManager)
         {
-            _commentRepo = commentRepo;
-            _stockRepo = stockRepo;
+            _service = service;
             _userManager = userManager;
         }
+
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-            var comments = await _commentRepo.GetAllAsync();
-            var commentDto = comments.Select(c => c.ToCommentDto());
-            return Ok(commentDto);
+            var res = await _service.GetAllAsync();
+            if (!res.Success) return BadRequest(res.Message);
+            return Ok(res.Data);
         }
+
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetById([FromRoute] int id)
         {
-             if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-            var comment = await _commentRepo.GetByIdAsync(id);
-            if (comment == null)
-            {
-                return NotFound();
-            }
-            return Ok(comment.ToCommentDto());
+            var res = await _service.GetByIdAsync(id);
+            if (!res.Success) return NotFound(res.Message);
+            return Ok(res.Data);
         }
+
+        [Authorize]
         [HttpPost("{stockId:int}")]
-        public async Task<IActionResult> Create([FromRoute] int stockId, CreateCommentDto commentDto)
+        public async Task<IActionResult> Create([FromRoute] int stockId, [FromBody] CreateCommentDto dto)
         {
-             if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-            if (!await _stockRepo.StockExists(stockId))
-            {
-                return BadRequest("Stock with the given ID does not exist.");
-            }
+            if (!ModelState.IsValid) return BadRequest(ModelState);
 
-            var username = User.GetUsername();
-            var appUser = await _userManager.FindByNameAsync(username);
+            var user = await GetCurrentUserAsync();
+            if (user == null) return Unauthorized();
 
-            var commentModel = commentDto.ToCommentFromCreate(stockId);
-            commentModel.AppUserId = appUser.Id;
-            await _commentRepo.CreateAsync(commentModel);
-            return CreatedAtAction(nameof(GetById), new { id = commentModel.Id }, commentModel.ToCommentDto());
+            var res = await _service.CreateAsync(dto, user.Id, stockId);
+            if (!res.Success) return BadRequest(res.Message);
+
+            return CreatedAtAction(nameof(GetById), new { id = res.Data.Id }, res.Data);
         }
-        [HttpPut]
-        [Route("{id}")]
-        public async Task<IActionResult> Update([FromRoute] int id, [FromBody] UpdateCommentRequestDto updateDto)
+
+        [Authorize]
+        [HttpPut("{id:int}")]
+        public async Task<IActionResult> Update([FromRoute] int id, [FromBody] UpdateCommentRequestDto dto)
         {
-             if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-            var comment = await _commentRepo.UpdateAsync(id, updateDto.ToCommentFromUpdate());
-            if (comment == null)
-            {
-              return  NotFound("Comment not found.");
-            }
-            return Ok(comment.ToCommentDto());
+           if (!ModelState.IsValid) return BadRequest(ModelState);
 
+           var user = await GetCurrentUserAsync();
+           if (user == null) return Unauthorized();
 
+           var res = await _service.UpdateAsync(id, dto, user.Id);
+           if (!res.Success && res.Message == "not_found") return NotFound();
+           if (!res.Success && res.Message == "forbidden") return Forbid();
+
+           return Ok(res.Data);
         }
-        [HttpDelete]
-        [Route("{id}")]
+
+        [Authorize]
+        [HttpDelete("{id:int}")]
         public async Task<IActionResult> Delete([FromRoute] int id)
         {
-             if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-            var commentModel = await _commentRepo.DeleteAsync(id);
-            if (commentModel == null)
-            {
-                return NotFound("Comment not found.");
-            }
+            var user = await GetCurrentUserAsync();
+            if (user == null) return Unauthorized();
+
+            var res = await _service.DeleteAsync(id, user.Id);
+            if (!res.Success && res.Message == "not_found") return NotFound();
+            if (!res.Success && res.Message == "forbidden") return Forbid();
+
             return NoContent();
         }
+        
+        private async Task<AppUser?> GetCurrentUserAsync()
+        {
+            var name = User?.Identity?.Name;
+            var email = User?.FindFirst("email")?.Value
+                        ?? User?.FindFirst(ClaimTypes.Email)?.Value;
+            var given = User?.FindFirst("given_name")?.Value;
 
+            var key = name ?? email ?? given;
+            if (string.IsNullOrWhiteSpace(key)) return null;
+
+            return await _userManager.Users
+                .FirstOrDefaultAsync(u => u.UserName == key || u.Email == key);
+        }
     }
 }

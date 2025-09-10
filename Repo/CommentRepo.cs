@@ -29,7 +29,6 @@ namespace Api.Repo
         public async Task<Comment> CreateAsync(Comment commentModel)
         {
             await _context.Comments.AddAsync(commentModel);
-            await _context.SaveChangesAsync();
             return commentModel;
         }
         public async Task<Comment?> UpdateAsync(int id, Comment commentModel)
@@ -43,7 +42,6 @@ namespace Api.Repo
             existingComment.Title = commentModel.Title;
             existingComment.Body = commentModel.Body;
 
-            await _context.SaveChangesAsync();
 
             return existingComment;
         }
@@ -55,7 +53,6 @@ namespace Api.Repo
                 return null;
             }
             _context.Comments.Remove(commentModel);
-            await _context.SaveChangesAsync();
             return commentModel;
         }
     }

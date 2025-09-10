@@ -1,11 +1,7 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Api.DTOs.Account;
 using Api.Interfaces;
 using Api.Models;
-using Microsoft.AspNetCore.Components;
+using AutoMapper;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -20,12 +16,15 @@ namespace Api.Controllers
         private readonly UserManager<AppUser> _userManager;
         private readonly ITokenService _tokenService;
         private readonly SignInManager<AppUser> _signInManager;
-        public AccountController(UserManager<AppUser> userManeger, ITokenService tokenService, SignInManager<AppUser> signInManager)
+        private readonly IMapper _mapper;
+        public AccountController(UserManager<AppUser> userManeger, ITokenService tokenService, SignInManager<AppUser> signInManager, IMapper mapper)
         {
             _userManager = userManeger;
             _tokenService = tokenService;
             _signInManager = signInManager;
+            _mapper = mapper;
         }
+        
         [HttpPost("login")]
         public async Task<IActionResult> Login(LoginDto loginDto)
         {
@@ -38,12 +37,9 @@ namespace Api.Controllers
             var result = await _signInManager.CheckPasswordSignInAsync(user, loginDto.Password, false);
 
             if (!result.Succeeded) return Unauthorized("Username not found or invalid password!"); 
-            return Ok(new NewUserDto
-            {
-                UserName = user.UserName,
-                Email = user.Email,
-                Token = _tokenService.CreateToken(user)
-            });
+           var dto = _mapper.Map<NewUserDto>(user);
+dto.Token = _tokenService.CreateToken(user);
+return Ok(dto);
         }
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterDto registerDto)
@@ -65,14 +61,9 @@ namespace Api.Controllers
                     var roleResult = await _userManager.AddToRoleAsync(appUser, "User");
                     if (roleResult.Succeeded)
                     {
-                        return Ok(
-                            new NewUserDto
-                            {
-                                UserName = appUser.UserName,
-                                Email = appUser.Email,
-                                Token = _tokenService.CreateToken(appUser)
-                            }
-                        );
+                        var dto = _mapper.Map<NewUserDto>(appUser);
+dto.Token = _tokenService.CreateToken(appUser);
+return Ok(dto);
                     }
                     else
                     {

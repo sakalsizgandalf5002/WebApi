@@ -11,6 +11,12 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Api.Service;
 using Microsoft.OpenApi.Models;
+using Api.Interfaces.IService;
+using FluentValidation;
+using FluentValidation.AspNetCore;
+using Api.Validators.Stock;
+using Api.Mappers;
+using Microsoft.Extensions.DependencyInjection;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -90,16 +96,24 @@ builder.Services
         };
     });
 
-
+builder.Services.AddAutoMapper(cfg => cfg.AddProfile<MappingProfile>());
 builder.Services.AddScoped<IStockRepo, StockRepo>();
-    builder.Services.AddScoped<ICommentRepo, CommentRepo>();
+builder.Services.AddScoped<IStockService, StockService>();
+builder.Services.AddScoped<ICommentRepo, CommentRepo>();
+builder.Services.AddScoped<ICommentService, CommentService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IPortfolioRepo, PortfolioRepo>();
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-    builder.Services.AddControllers().AddNewtonsoftJson(options =>
+
+builder.Services.AddControllers().AddNewtonsoftJson(options =>
 {
-    options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore;
+options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore;
 });
+builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddValidatorsFromAssemblyContaining<CreateStockRequestDtoValidator>();
+
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

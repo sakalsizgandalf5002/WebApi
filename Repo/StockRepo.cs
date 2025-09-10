@@ -23,7 +23,6 @@ namespace Api.Repo
         public async Task<Stock?> CreateAsync(Stock stockModel)
         {
             await _context.Stocks.AddAsync(stockModel);
-            await _context.SaveChangesAsync();
             return stockModel;
         }
 
@@ -36,7 +35,6 @@ namespace Api.Repo
             }
 
             _context.Stocks.Remove(stockModel);
-            await _context.SaveChangesAsync();
             return stockModel;
         }
 
@@ -73,7 +71,10 @@ namespace Api.Repo
         }
         public async Task<Stock?> GetByIdAsync(int id)
         {
-            return await _context.Stocks.Include(c => c.Comments).FirstOrDefaultAsync(s => s.Id == id);
+            return await _context.Stocks
+        .Include(s => s.Comments)
+            .ThenInclude(c => c.AppUser)  
+        .FirstOrDefaultAsync(s => s.Id == id);
         }
         public async Task<Stock?> UpdateAsync(int id, UpdateStockRequestDto stockDto)
         {
@@ -88,7 +89,6 @@ namespace Api.Repo
             existingStock.LastDiv = stockDto.LastDiv;
             existingStock.Industry = stockDto.Industry;
             existingStock.MarketCap = stockDto.MarketCap;
-            await _context.SaveChangesAsync();
             return existingStock;
         }
         public Task<bool> StockExists(int id)
@@ -98,6 +98,40 @@ namespace Api.Repo
         public async Task<Stock?> GetBySymbolAsync(string symbol)
         {
             return await _context.Stocks.FirstOrDefaultAsync(s => s.Symbol == symbol);
+        }
+
+        public async Task<PagedResult<Stock>> QueryAsync(QueryObject query)
+        {
+            var q = _context.Stocks.AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(query.Symbol))
+                q = q.Where(s => s.Symbol.Contains(query.Symbol));
+
+            if (!string.IsNullOrWhiteSpace(query.Industry))
+                q = q.Where(s => s.Industry.Contains(query.Industry));
+
+            if (!string.IsNullOrWhiteSpace(query.CompanyName))
+                q = q.Where(s => s.CompanyName.Contains(query.CompanyName));
+
+            if (!string.IsNullOrWhiteSpace(query.SortBy))
+                q = query.IsDescending ? q.OrderByDescending(x => EF.Property<object>(x, query.SortBy))
+                                      : q.OrderBy(x => EF.Property<object>(x, query.SortBy));
+
+            var total = await q.CountAsync();
+
+            var page = query.PageNumber <= 0 ? 1 : query.PageNumber;
+            var pageSize = query.PageSize <= 0 ? 20 : query.PageSize;
+
+            var items = await q.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
+
+            var result = new Api.Helpers.PagedResult<Stock>();
+    result.Items = items;
+    result.TotalCount = total;
+    result.PageNumber = page;
+    result.PageSize = pageSize;
+    return result;
+
+
         }
     }
 }

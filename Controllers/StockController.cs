@@ -6,12 +6,11 @@ using Api.Interfaces.IService;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-
 namespace Api.Controllers
 {
     [Route("api/stock")]
     [ApiController]
-    public class StockController : ControllerBase
+    public class StockController : AppControllerBase
     {
         private readonly IStockService _stockService;
         public StockController(IStockService stockService)
@@ -48,7 +47,9 @@ namespace Api.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var result = await _stockService.CreateAsync(stockDto, User?.Identity?.Name);
+            if (string.IsNullOrWhiteSpace(UserId)) return Unauthorized();
+
+            var result = await _stockService.CreateAsync(stockDto, UserId);
             if (!result.Success) return BadRequest(result.Message);
             return CreatedAtAction(nameof(GetById), new { id = result.Data.Id }, result.Data);
         }
@@ -60,7 +61,9 @@ namespace Api.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var result = await _stockService.UpdateAsync(id, updateDto, User?.Identity?.Name);
+            if (string.IsNullOrWhiteSpace(UserId)) return Unauthorized();
+
+            var result = await _stockService.UpdateAsync(id, updateDto, UserId);
             if (!result.Success) return NotFound(result.Message);
             return Ok(result.Data);
         }
@@ -72,9 +75,12 @@ namespace Api.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var result = await _stockService.DeleteAsync(id, User?.Identity?.Name);
+            if (string.IsNullOrWhiteSpace(UserId)) return Unauthorized();
+
+            var result = await _stockService.DeleteAsync(id, UserId);
             if (!result.Success) return NotFound(result.Message);
             return NoContent();
         }
     }
 }
+

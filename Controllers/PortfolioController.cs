@@ -26,54 +26,70 @@ namespace Api.Controllers
             _stockRepo = stockRepo;
             _portfolioRepo = portfolioRepo;
         }
+
         [HttpGet]
         [Authorize]
         public async Task<IActionResult> GetUserPortfolio()
         {
-            var username = User.GetUsername();
-            var appUser = await _userManager.FindByNameAsync(username);
+            var userId = User.GetUserId();
+            if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
+
+            var appUser = await _userManager.FindByIdAsync(userId);
+            if (appUser is null) return Unauthorized();
+
             var userPortfolio = await _portfolioRepo.GetUserPortfolio(appUser);
             return Ok(userPortfolio);
         }
+
         [HttpPost]
         [Authorize]
-        public async Task<IActionResult> AddPortfolio(string symbol)
+        public async Task<IActionResult> AddPortfolio([FromQuery] string symbol)
         {
-            var username = User.GetUsername();
-            var appUser = await _userManager.FindByNameAsync(username);
-            var stock = await _stockRepo.GetBySymbolAsync(symbol);
+            if (string.IsNullOrWhiteSpace(symbol)) return BadRequest("Symbol is required.");
 
+            var userId = User.GetUserId();
+            if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
+
+            var appUser = await _userManager.FindByIdAsync(userId);
+            if (appUser is null) return Unauthorized();
+
+            var stock = await _stockRepo.GetBySymbolAsync(symbol);
             if (stock == null) return NotFound("Stock not found");
+
             var userPortfolio = await _portfolioRepo.GetUserPortfolio(appUser);
-            if (userPortfolio.Any(s => s.Symbol.ToLower() == symbol.ToLower())) return BadRequest("Stock already in portfolio");
+            if (userPortfolio.Any(s => s.Symbol.Equals(symbol, StringComparison.OrdinalIgnoreCase)))
+                return BadRequest("Stock already in portfolio");
 
             var portfolioModel = new Portfolio
             {
                 StockId = stock.Id,
                 AppUserId = appUser.Id
             };
-            await _portfolioRepo.CreateAsync(portfolioModel);
-            if (portfolioModel == null)
-            {
-                return StatusCode(500, "An error occurred while adding the stock to the portfolio");
-            }
-            else
-            {
-                return Created();
-            }
 
+            await _portfolioRepo.CreateAsync(portfolioModel);
+
+            if (portfolioModel == null)
+                return StatusCode(500, "An error occurred while adding the stock to the portfolio");
+
+            return Created();
         }
+
         [HttpDelete]
         [Authorize]
-        public async Task<IActionResult> DeletePortfolio(string symbol)
+        public async Task<IActionResult> DeletePortfolio([FromQuery] string symbol)
         {
-            var username = User.GetUsername();
-            var appUser = await _userManager.FindByNameAsync(username);
+            if (string.IsNullOrWhiteSpace(symbol)) return BadRequest("Symbol is required.");
+
+            var userId = User.GetUserId();
+            if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
+
+            var appUser = await _userManager.FindByIdAsync(userId);
+            if (appUser is null) return Unauthorized();
 
             var userPortfolio = await _portfolioRepo.GetUserPortfolio(appUser);
 
-            var filteredStock = userPortfolio.Where(s => s.Symbol.ToLower() == symbol.ToLower()).ToList();
-            if (filteredStock.Count() == 1)
+            var filteredStock = userPortfolio.Where(s => s.Symbol.Equals(symbol, StringComparison.OrdinalIgnoreCase)).ToList();
+            if (filteredStock.Count == 1)
             {
                 await _portfolioRepo.DeletePortfolio(appUser, symbol);
             }
@@ -82,7 +98,6 @@ namespace Api.Controllers
                 return BadRequest("Stock is not in your portfolio");
             }
             return Ok();
-
         }
     }
 }

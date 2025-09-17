@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc; 
 using Api.Models;
 using Api.DTOs.Comment;
 using Microsoft.AspNetCore.Identity;
@@ -85,6 +85,17 @@ namespace Api.Controllers
         
         private async Task<AppUser?> GetCurrentUserAsync()
         {
+            // Önce en sağlam kaynak: token'daki subject/NameIdentifier
+            var userId = User?.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                         ?? User?.FindFirst("sub")?.Value;
+
+            if (!string.IsNullOrWhiteSpace(userId))
+            {
+                // DB sorgusuna gerek yok; servisler sadece Id'yi kullanıyor.
+                return new AppUser { Id = userId };
+            }
+
+            // Fallback: eski name/email/given_name ile arama (token eksikse)
             var name = User?.Identity?.Name;
             var email = User?.FindFirst("email")?.Value
                         ?? User?.FindFirst(ClaimTypes.Email)?.Value;

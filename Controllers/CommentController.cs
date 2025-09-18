@@ -11,7 +11,7 @@ namespace Api.Controllers
 {
     [Route("api/comment")]
     [ApiController]
-    public class CommentController : ControllerBase
+    public class CommentController : AppControllerBase
     {
         private readonly ICommentService _service;
         private readonly UserManager<AppUser> _userManager;

@@ -15,7 +15,7 @@ namespace Api.Controllers
 {
     [Route("api/portfolio")]
     [ApiController]
-    public class PortfolioController : Controller
+    public class PortfolioController : AppControllerBase
     {
         private readonly UserManager<AppUser> _userManager;
         private readonly IStockRepo _stockRepo;

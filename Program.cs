@@ -17,6 +17,8 @@ using FluentValidation.AspNetCore;
 using Api.Validators.Stock;
 using Api.Mappers;
 using Microsoft.Extensions.DependencyInjection;
+using Api.Middleware;
+using Microsoft.AspNetCore.Builder;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -122,7 +124,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-
+app.UseMiddleware<ExceptionMiddleware>();
 app.UseHttpsRedirection();
 
 app.UseAuthentication(); 

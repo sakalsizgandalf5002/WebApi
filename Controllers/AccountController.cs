@@ -11,7 +11,7 @@ namespace Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class AccountController : ControllerBase
+    public class AccountController : AppControllerBase
     {
         private readonly UserManager<AppUser> _userManager;
         private readonly ITokenService _tokenService;

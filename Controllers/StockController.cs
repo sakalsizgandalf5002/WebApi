@@ -1,4 +1,3 @@
-
 using Api.DTOs;
 using Api.DTOs.Stock;
 using Api.Helpers;
@@ -21,9 +20,6 @@ namespace Api.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAll([FromQuery] QueryObject query)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-
             var result = await _stockService.QueryAsync(query);
             if (!result.Success) return BadRequest(result.Message);
             return Ok(result.Data);
@@ -32,9 +28,6 @@ namespace Api.Controllers
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetById([FromRoute] int id)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-
             var result = await _stockService.GetByIdAsync(id);
             if (!result.Success) return NotFound(result.Message);
             return Ok(result.Data);
@@ -44,9 +37,6 @@ namespace Api.Controllers
         [Authorize]
         public async Task<IActionResult> Create([FromBody] CreateStockRequestDto stockDto)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-
             if (string.IsNullOrWhiteSpace(UserId)) return Unauthorized();
 
             var result = await _stockService.CreateAsync(stockDto, UserId);
@@ -58,9 +48,6 @@ namespace Api.Controllers
         [Authorize]
         public async Task<IActionResult> Update([FromRoute] int id, [FromBody] UpdateStockRequestDto updateDto)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-
             if (string.IsNullOrWhiteSpace(UserId)) return Unauthorized();
 
             var result = await _stockService.UpdateAsync(id, updateDto, UserId);
@@ -72,9 +59,6 @@ namespace Api.Controllers
         [Authorize]
         public async Task<IActionResult> Delete([FromRoute] int id)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-
             if (string.IsNullOrWhiteSpace(UserId)) return Unauthorized();
 
             var result = await _stockService.DeleteAsync(id, UserId);
@@ -83,4 +67,3 @@ namespace Api.Controllers
         }
     }
 }
-

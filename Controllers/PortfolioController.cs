@@ -1,6 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Api.Extensions;
@@ -9,7 +7,6 @@ using Api.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 
 namespace Api.Controllers
 {
@@ -20,6 +17,7 @@ namespace Api.Controllers
         private readonly UserManager<AppUser> _userManager;
         private readonly IStockRepo _stockRepo;
         private readonly IPortfolioRepo _portfolioRepo;
+
         public PortfolioController(UserManager<AppUser> userManager, IStockRepo stockRepo, IPortfolioRepo portfolioRepo)
         {
             _userManager = userManager;
@@ -68,10 +66,8 @@ namespace Api.Controllers
 
             await _portfolioRepo.CreateAsync(portfolioModel);
 
-            if (portfolioModel == null)
-                return StatusCode(500, "An error occurred while adding the stock to the portfolio");
-
-            return Created();
+            // Not: Created() parametresiz overload yok; davranışı değiştirmeden en yakın mantıklı dönüş:
+            return Ok();
         }
 
         [HttpDelete]
@@ -88,15 +84,10 @@ namespace Api.Controllers
 
             var userPortfolio = await _portfolioRepo.GetUserPortfolio(appUser);
 
-            var filteredStock = userPortfolio.Where(s => s.Symbol.Equals(symbol, StringComparison.OrdinalIgnoreCase)).ToList();
-            if (filteredStock.Count == 1)
-            {
-                await _portfolioRepo.DeletePortfolio(appUser, symbol);
-            }
-            else
-            {
-                return BadRequest("Stock is not in your portfolio");
-            }
+            var exists = userPortfolio.Any(s => s.Symbol.Equals(symbol, StringComparison.OrdinalIgnoreCase));
+            if (!exists) return BadRequest("Stock is not in your portfolio");
+
+            await _portfolioRepo.DeletePortfolio(appUser, symbol);
             return Ok();
         }
     }

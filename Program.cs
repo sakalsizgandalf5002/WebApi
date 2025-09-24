@@ -105,6 +105,7 @@ builder.Services.AddScoped<ICommentRepo, CommentRepo>();
 builder.Services.AddScoped<ICommentService, CommentService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IPortfolioRepo, PortfolioRepo>();
+builder.Services.AddScoped<IPortfolioService, PortfolioService>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 

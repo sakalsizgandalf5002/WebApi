@@ -11,7 +11,7 @@ namespace Api.Interfaces.IService
     public interface IStockService
     {
     Task<Result<StockDto>> GetByIdAsync(int id);
-    Task<Result<StockDto>> GetBySymbolAsync(string symbol);
+    Task<Result<StockDto>> GetBySymbolAsync(string symbol, CancellationToken ct);
     Task<Result<PagedResult<StockDto>>> QueryAsync(QueryObject query);
     Task<Result<StockDto>> CreateAsync(CreateStockRequestDto dto, string userId);
     Task<Result<StockDto>> UpdateAsync(int id, UpdateStockRequestDto dto, string userId);

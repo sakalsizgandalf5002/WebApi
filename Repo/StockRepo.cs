@@ -95,9 +95,9 @@ namespace Api.Repo
         {
             return _context.Stocks.AnyAsync(s => s.Id == id);
         }
-        public async Task<Stock?> GetBySymbolAsync(string symbol)
+        public async Task<Stock?> GetBySymbolAsync(string symbol, CancellationToken ct)
         {
-            return await _context.Stocks.FirstOrDefaultAsync(s => s.Symbol == symbol);
+            return await _context.Stocks.FirstOrDefaultAsync(s => s.Symbol == symbol, ct);
         }
 
         public async Task<PagedResult<Stock>> QueryAsync(QueryObject query)

@@ -34,9 +34,9 @@ namespace Api.Service
             return Result<StockDto>.Ok(_mapper.Map<StockDto>(e));
         }
 
-        public async Task<Result<StockDto>> GetBySymbolAsync(string symbol)
+        public async Task<Result<StockDto>> GetBySymbolAsync(string symbol, CancellationToken ct)
         {
-            var e = await _repo.GetBySymbolAsync(symbol);
+            var e = await _repo.GetBySymbolAsync(symbol, ct);
             if (e == null) return Result<StockDto>.Fail("not_found");
             return Result<StockDto>.Ok(_mapper.Map<StockDto>(e));
         }

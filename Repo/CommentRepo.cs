@@ -18,22 +18,22 @@ namespace Api.Repo
         {
             _context = context;
         }
-        public async Task<List<Comment>> GetAllAsync()
+        public async Task<List<Comment>> GetAllAsync(CancellationToken ct)
         {
-            return await _context.Comments.Include(a => a.AppUser).ToListAsync();
+            return await _context.Comments.Include(a => a.AppUser).ToListAsync(ct);
         }
-        public async Task<Comment?> GetByIdAsync(int id)
+        public async Task<Comment?> GetByIdAsync(int id, CancellationToken ct)
         {
-            return await _context.Comments.Include(a => a.AppUser).FirstOrDefaultAsync(c => c.Id == id);
+            return await _context.Comments.Include(a => a.AppUser).FirstOrDefaultAsync(c => c.Id == id, ct);
         }
-        public async Task<Comment> CreateAsync(Comment commentModel)
+        public async Task<Comment> CreateAsync(Comment commentModel, CancellationToken ct)
         {
-            await _context.Comments.AddAsync(commentModel);
+            await _context.Comments.AddAsync(commentModel, ct);
             return commentModel;
         }
-        public async Task<Comment?> UpdateAsync(int id, Comment commentModel)
+        public async Task<Comment?> UpdateAsync(int id, Comment commentModel, CancellationToken ct)
         {
-            var existingComment = await _context.Comments.FindAsync(id);
+            var existingComment = await _context.Comments.FindAsync(id, ct);
             if (existingComment == null)
             {
                 return null;
@@ -45,9 +45,9 @@ namespace Api.Repo
 
             return existingComment;
         }
-        public async Task<Comment?> DeleteAsync(int id)
+        public async Task<Comment?> DeleteAsync(int id, CancellationToken ct)
         {
-            var commentModel = await _context.Comments.FirstOrDefaultAsync(c => c.Id == id );
+            var commentModel = await _context.Comments.FirstOrDefaultAsync(c => c.Id == id, ct);
             if (commentModel == null)
             {
                 return null;

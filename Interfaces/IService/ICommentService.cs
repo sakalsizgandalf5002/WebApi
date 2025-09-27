@@ -9,10 +9,10 @@ namespace Api.Interfaces.IService
 {
     public interface ICommentService
     {
-         Task<Result<List<CommentDto>>> GetAllAsync();
-        Task<Result<CommentDto>> GetByIdAsync(int id);
-        Task<Result<CommentDto>> CreateAsync(CreateCommentDto dto, string userId, int stockId);
-        Task<Result<CommentDto>> UpdateAsync(int id, UpdateCommentRequestDto dto, string userId);
-        Task<Result<bool>> DeleteAsync(int id, string userId);
+         Task<Result<List<CommentDto>>> GetAllAsync(CancellationToken ct);
+        Task<Result<CommentDto>> GetByIdAsync(int id, CancellationToken ct);
+        Task<Result<CommentDto>> CreateAsync(CreateCommentDto dto, string userId, int stockId, CancellationToken ct);
+        Task<Result<CommentDto>> UpdateAsync(int id, UpdateCommentRequestDto dto, string userId, CancellationToken ct);
+        Task<Result<bool>> DeleteAsync(int id, string userId, CancellationToken ct);
     }
 }

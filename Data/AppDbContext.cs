@@ -21,6 +21,10 @@ namespace Api.Data
         {
             base.OnModelCreating(builder);
 
+            builder.Entity<Stock>()
+            .HasIndex(s => s.Symbol)
+            .IsUnique();
+
             builder.Entity<Portfolio>(x => x.HasKey(p => new { p.AppUserId, p.StockId }));
 
             builder.Entity<Portfolio>()

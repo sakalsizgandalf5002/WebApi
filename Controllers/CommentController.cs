@@ -23,29 +23,29 @@ namespace Api.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAll(CancellationToken ct)
         {
-            var res = await _service.GetAllAsync();
+            var res = await _service.GetAllAsync(ct);
             if (!res.Success) return BadRequest(res.Message);
             return Ok(res.Data);
         }
 
         [HttpGet("{id:int}")]
-        public async Task<IActionResult> GetById([FromRoute] int id)
+        public async Task<IActionResult> GetById([FromRoute] int id, CancellationToken ct)
         {
-            var res = await _service.GetByIdAsync(id);
+            var res = await _service.GetByIdAsync(id, ct);
             if (!res.Success) return NotFound(res.Message);
             return Ok(res.Data);
         }
 
         [Authorize]
         [HttpPost("{stockId:int}")]
-        public async Task<IActionResult> Create([FromRoute] int stockId, [FromBody] CreateCommentDto dto)
+        public async Task<IActionResult> Create([FromRoute] int stockId, [FromBody] CreateCommentDto dto, CancellationToken ct)
         {
             var user = await GetCurrentUserAsync();
             if (user == null) return Unauthorized();
 
-            var res = await _service.CreateAsync(dto, user.Id, stockId);
+            var res = await _service.CreateAsync(dto, user.Id, stockId, ct);
             if (!res.Success) return BadRequest(res.Message);
 
             return CreatedAtAction(nameof(GetById), new { id = res.Data.Id }, res.Data);
@@ -53,12 +53,12 @@ namespace Api.Controllers
 
         [Authorize]
         [HttpPut("{id:int}")]
-        public async Task<IActionResult> Update([FromRoute] int id, [FromBody] UpdateCommentRequestDto dto)
+        public async Task<IActionResult> Update([FromRoute] int id, [FromBody] UpdateCommentRequestDto dto, CancellationToken ct)
         {
            var user = await GetCurrentUserAsync();
            if (user == null) return Unauthorized();
 
-           var res = await _service.UpdateAsync(id, dto, user.Id);
+           var res = await _service.UpdateAsync(id, dto, user.Id, ct);
            if (!res.Success && res.Message == "not_found") return NotFound();
            if (!res.Success && res.Message == "forbidden") return Forbid();
 
@@ -67,12 +67,12 @@ namespace Api.Controllers
 
         [Authorize]
         [HttpDelete("{id:int}")]
-        public async Task<IActionResult> Delete([FromRoute] int id)
+        public async Task<IActionResult> Delete([FromRoute] int id, CancellationToken ct)
         {
             var user = await GetCurrentUserAsync();
             if (user == null) return Unauthorized();
 
-            var res = await _service.DeleteAsync(id, user.Id);
+            var res = await _service.DeleteAsync(id, user.Id, ct);
             if (!res.Success && res.Message == "not_found") return NotFound();
             if (!res.Success && res.Message == "forbidden") return Forbid();
 

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 using Api.DTOs.Comment;
@@ -24,53 +25,53 @@ namespace Api.Service
             _mapper = mapper;
         }
 
-        public async Task<Result<List<CommentDto>>> GetAllAsync()
+        public async Task<Result<List<CommentDto>>> GetAllAsync(CancellationToken ct)
         {
-            var list = await _repo.GetAllAsync();
+            var list = await _repo.GetAllAsync(ct);
             var dtoList = list.Select(_mapper.Map<CommentDto>).ToList();
             return Result<List<CommentDto>>.Ok(dtoList);
         }
 
-        public async Task<Result<CommentDto>> GetByIdAsync(int id)
+        public async Task<Result<CommentDto>> GetByIdAsync(int id, CancellationToken ct)
         {
-            var e = await _repo.GetByIdAsync(id);
+            var e = await _repo.GetByIdAsync(id, ct);
             if (e == null) return Result<CommentDto>.Fail("not_found");
             return Result<CommentDto>.Ok(_mapper.Map<CommentDto>(e));
         }
 
-        public async Task<Result<CommentDto>> CreateAsync(CreateCommentDto dto, string userId, int stockId)
+        public async Task<Result<CommentDto>> CreateAsync(CreateCommentDto dto, string userId, int stockId, CancellationToken ct)
         {
             var entity = _mapper.Map<Models.Comment>(dto);
             entity.AppUserId = userId;
             entity.StockId = stockId;
 
-            var created = await _repo.CreateAsync(entity);
+            var created = await _repo.CreateAsync(entity, ct);
             await _uow.SaveChangesAsync();
 
             return Result<CommentDto>.Ok(_mapper.Map<CommentDto>(created));
         }
 
-        public async Task<Result<CommentDto>> UpdateAsync(int id, UpdateCommentRequestDto dto, string userId)
+        public async Task<Result<CommentDto>> UpdateAsync(int id, UpdateCommentRequestDto dto, string userId, CancellationToken ct)
         {
-            var existing = await _repo.GetByIdAsync(id);
+            var existing = await _repo.GetByIdAsync(id, ct);
             if (existing == null) return Result<CommentDto>.Fail("not_found");
             if (existing.AppUserId != userId) return Result<CommentDto>.Fail("forbidden");
 
             _mapper.Map(dto, existing);
 
-            var updated = await _repo.UpdateAsync(id, existing);
+            var updated = await _repo.UpdateAsync(id, existing, ct);
             await _uow.SaveChangesAsync();
 
             return Result<CommentDto>.Ok(_mapper.Map<CommentDto>(updated));
         }
 
-        public async Task<Result<bool>> DeleteAsync(int id, string userId)
+        public async Task<Result<bool>> DeleteAsync(int id, string userId, CancellationToken ct)
         {
-            var existing = await _repo.GetByIdAsync(id);
+            var existing = await _repo.GetByIdAsync(id, ct);
             if (existing == null) return Result<bool>.Fail("not_found");
             if (existing.AppUserId != userId) return Result<bool>.Fail("forbidden");
 
-            var deleted = await _repo.DeleteAsync(id);
+            var deleted = await _repo.DeleteAsync(id, ct);
             await _uow.SaveChangesAsync();
 
             return Result<bool>.Ok(deleted != null);

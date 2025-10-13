@@ -1,15 +1,18 @@
-# Build outputs
+
 bin/
 obj/
+TestResults/
 
-# VS / Rider / VS Code ayarları
+
 .vs/
-.idea/
+.vscode/
 *.user
 *.suo
 
-# Logs
-*.log
 
-# Publish
-out/
+logs/
+*.db
+*.sqlite
+
+
+.env

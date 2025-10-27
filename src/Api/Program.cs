@@ -1,3 +1,4 @@
+using System.Reflection;
 using Serilog;
 using Serilog.Events;
 using Microsoft.OpenApi.Models;
@@ -7,12 +8,19 @@ using Microsoft.AspNetCore.Rewrite;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Api.Data;
 using Api.Models;
+using Api.Service;
+using Api.Repo;
+using Api.Interfaces;
 using Api.Security;
+using Api.Mappers;
+using AutoMapper;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Text.Json;
+using Api.Interfaces.IService;
+
 
 // Serilog bootstrap
 Log.Logger = new LoggerConfiguration()
@@ -28,32 +36,60 @@ Log.Logger = new LoggerConfiguration()
 var builder = WebApplication.CreateBuilder(args);
 builder.Host.UseSerilog((ctx, lc) => lc.ReadFrom.Configuration(ctx.Configuration));
 
-// Portlarý sabitle
-builder.WebHost.ConfigureKestrel(k =>
-{
-    k.ListenLocalhost(5254);                 // HTTP
-    k.ListenLocalhost(7254, o => o.UseHttps()); // HTTPS
-});
 
 // Services
 builder.Services.AddDbContext<AppDbContext>(o =>
-    o.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))
-     .EnableDetailedErrors(builder.Environment.IsDevelopment())
-     .EnableSensitiveDataLogging(builder.Environment.IsDevelopment()));
-
-builder.Services.AddIdentity<AppUser, IdentityRole>(opt =>
 {
-    opt.Password.RequireDigit = true;
-    opt.Password.RequireLowercase = true;
-    opt.Password.RequireUppercase = true;
-    opt.Password.RequireNonAlphanumeric = false;
-    opt.Password.RequiredLength = 12;
-}).AddEntityFrameworkStores<AppDbContext>();
+    var cs = builder.Configuration.GetConnectionString("DefaultConnection")
+             ?? Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
+
+    if (string.IsNullOrWhiteSpace(cs))
+        throw new InvalidOperationException("No connection string found. Check env var ConnectionStrings__DefaultConnection.");
+
+    o.UseSqlServer(cs)
+        .EnableDetailedErrors(builder.Environment.IsDevelopment())
+        .EnableSensitiveDataLogging(builder.Environment.IsDevelopment());
+});
+
+builder.Services
+    .AddIdentityCore<AppUser>(opt =>
+    {
+        opt.Password.RequireDigit = true;
+        opt.Password.RequireLowercase = true;
+        opt.Password.RequireUppercase = true;
+        opt.Password.RequireNonAlphanumeric = false;
+        opt.Password.RequiredLength = 12;
+    })
+    .AddRoles<IdentityRole>()
+    .AddEntityFrameworkStores<AppDbContext>()
+    .AddSignInManager();
+
+builder.Services.AddAutoMapper(
+    cfg => { },
+    typeof(Program).Assembly,
+    typeof(MappingProfile).Assembly
+);
+
+builder.Services.AddScoped<IStockRepo, StockRepo>();
+builder.Services.AddScoped<ICommentRepo, CommentRepo>();
+builder.Services.AddScoped<IPortfolioRepo, PortfolioRepo>();
+
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+builder.Services.AddScoped<IStockService, StockService>();
+builder.Services.AddScoped<ICommentService,  CommentService>();
+builder.Services.AddScoped<IPortfolioService, PortfolioService>();
+builder.Services.AddScoped<ITokenService, TokenService>();
 
 builder.Services.Configure<PepperedPasswordHasher.Options>(builder.Configuration.GetSection("Security"));
 builder.Services.AddScoped<IPasswordHasher<AppUser>, PepperedPasswordHasher>();
 
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+builder.Services.AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme    = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultScheme             = JwtBearerDefaults.AuthenticationScheme;
+    })
     .AddJwtBearer(o =>
     {
         o.TokenValidationParameters = new TokenValidationParameters
@@ -68,7 +104,6 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JWT:SigningKey"]))
         };
     });
-
 builder.Services.AddControllers().AddNewtonsoftJson(x =>
     x.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore);
 
@@ -97,7 +132,6 @@ builder.Services.AddHealthChecks()
 
 var app = builder.Build();
 
-// RequestId + UserId zenginleþtirme
 app.Use(async (ctx, next) =>
 {
     var reqId = ctx.Request.Headers.TryGetValue("X-Request-ID", out var h) && !string.IsNullOrWhiteSpace(h)
@@ -134,7 +168,7 @@ if (app.Environment.IsDevelopment())
     app.UseRewriter(new RewriteOptions().AddRedirect("^$", "swagger", 302));
 }
 
-app.UseHttpsRedirection();
+
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
@@ -163,7 +197,7 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = r => r
 try
 {
     Log.Information("Starting WebApi on http://localhost:5254 and https://localhost:7254");
-    app.Run(); // bloklar; kapanma çaðrýsý YOK
+    app.Run();
 }
 catch (Exception ex)
 {

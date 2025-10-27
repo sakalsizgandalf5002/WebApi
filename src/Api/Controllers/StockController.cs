@@ -42,6 +42,7 @@ namespace Api.Controllers
 
         [HttpPost]
         [Authorize]
+        [Consumes("application/json")]
         public async Task<IActionResult> Create([FromBody] CreateStockRequestDto dto, CancellationToken ct)
         {
             if (string.IsNullOrWhiteSpace(UserId)) return Unauthorized();

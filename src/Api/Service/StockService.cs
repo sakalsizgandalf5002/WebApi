@@ -8,7 +8,7 @@ using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-namespace Api.Services
+namespace Api.Service
 {
     public class StockService : IStockService
     {

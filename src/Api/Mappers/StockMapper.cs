@@ -1,3 +1,4 @@
+using Api.DTOs;
 using AutoMapper;
 using Api.DTOs.Stock;
 using Api.Models;

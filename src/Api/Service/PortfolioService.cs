@@ -7,6 +7,7 @@ using Api.DomainLogs;
 using Api.DTOs.Stock;
 using Api.Helpers;
 using Api.Interfaces;
+using Api.Interfaces.IRepo;
 using Api.Interfaces.IService;
 using Api.Models;
 using AutoMapper;

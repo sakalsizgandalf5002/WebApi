@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Api.Models;
 
-namespace Api.Interfaces
+namespace Api.Interfaces.IRepo
 {
     public interface IPortfolioRepo
     {

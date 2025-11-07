@@ -19,6 +19,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Text.Json;
+using Api.Interfaces.IRepo;
 using Api.Interfaces.IService;
 
 
@@ -67,7 +68,9 @@ builder.Services
 builder.Services.AddAutoMapper(
     cfg => { },
     typeof(Program).Assembly,
-    typeof(MappingProfile).Assembly
+    typeof(AccountMapper).Assembly,
+    typeof(StockMapper).Assembly,
+    typeof(CommentMapper).Assembly
 );
 
 builder.Services.AddScoped<IStockRepo, StockRepo>();

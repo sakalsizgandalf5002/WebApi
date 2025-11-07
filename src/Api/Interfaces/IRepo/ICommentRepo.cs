@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using Api.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace Api.Interfaces
+namespace Api.Interfaces.IRepo
 {
     public interface ICommentRepo
     {

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Api.Data;
 using Api.Interfaces;
+using Api.Interfaces.IRepo;
 using Microsoft.EntityFrameworkCore;
 using Api.Models;
 

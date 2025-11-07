@@ -1,6 +1,10 @@
+using System.Threading;
+using System.Threading.Tasks;
 using Api.DTOs;
 using Api.DTOs.Stock;
 using Api.Helpers;
+
+namespace Api.Interfaces.IService;
 
 public interface IStockService
 {

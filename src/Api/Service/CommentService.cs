@@ -4,6 +4,7 @@ using Api.Helpers;
 using Api.Interfaces;
 using Api.Models;
 using Api.DomainLogs;
+using Api.Interfaces.IRepo;
 using AutoMapper;
 using Api.Interfaces.IService;
 

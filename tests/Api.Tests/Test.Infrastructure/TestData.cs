@@ -1,3 +1,4 @@
+using Api.DTOs;
 using Api.Models;
 using Api.DTOs.Stock;
 

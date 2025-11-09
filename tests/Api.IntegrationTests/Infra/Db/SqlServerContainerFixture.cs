@@ -1,37 +1,30 @@
 using System.Threading.Tasks;
 using DotNet.Testcontainers.Builders;
-using DotNet.Testcontainers.Containers;
-using DotNet.Testcontainers.Configurations;
+using Testcontainers.MsSql;
 using Xunit;
 
 namespace Api.IntegrationTests.Infra.Db;
 
 public sealed class SqlServerContainerFixture : IAsyncLifetime
 {
-    public MsSqlTestcontainer Container { get; private set; } = default;
-    
-    public string ConnectionString => Container.ConnectionString;
-
-    private const string Image = "mcr.microsoft.com/mssql/server:2022-latest";
-    
-    private const string Password = "Str0ng_P@ssw0rd!";
+    private MsSqlContainer _container = default!;
+    public string ConnectionString => _container.GetConnectionString();
 
     public async Task InitializeAsync()
     {
-        Container = new TestcontainersBuilder<MsSqlTestcontainer>()
+        _container = new MsSqlBuilder()
             .WithImage("mcr.microsoft.com/mssql/server:2022-latest")
+            .WithPassword("Str0ng_P@ssw0rd!")
             .WithEnvironment("ACCEPT_EULA", "Y")
-            .WithEnvironment("SA_PASSWORD", "Str0ng_P@ssw0rd!") 
-            .WithCleanUp(true)
+            .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(1433))
             .Build();
 
-        await Container.StartAsync();
+        await _container.StartAsync();
     }
 
     public async Task DisposeAsync()
     {
-        if (Container != null)
-            await Container.DisposeAsync();
+        if (_container is not null)
+            await _container.DisposeAsync();
     }
-
 }

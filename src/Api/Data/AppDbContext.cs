@@ -17,6 +17,8 @@ namespace Api.Data
         public DbSet<Stock> Stocks { get; set; } = default!;
         public DbSet<Comment> Comments { get; set; } = default!;
         public DbSet<Portfolio> Portfolios { get; set; } = default!;
+        
+        public DbSet<RefreshToken> RefreshTokens { get; set; } = default!;        
        protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -36,6 +38,17 @@ namespace Api.Data
                 .HasOne(u => u.Stock)
                 .WithMany(u => u.Portfolios)
                 .HasForeignKey(u => u.StockId);
+
+                builder.Entity<RefreshToken>(e =>
+                {
+                    e.HasKey(x => x.Id);
+                    e.Property(x => x.Token).IsRequired();
+                    e.HasIndex(x => x.Token).IsUnique();
+                    e.HasOne(x => x.User)
+                        .WithMany(u => u.RefreshTokens)
+                        .HasForeignKey(x => x.UserId)
+                        .OnDelete(DeleteBehavior.Cascade);
+                });
 
             List<IdentityRole> roles = new List<IdentityRole>
     {

@@ -1,7 +1,9 @@
 using Api.DTOs.Account;
 using Api.Interfaces;
+using Api.Interfaces.IService;
 using Api.Models;
 using AutoMapper;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -16,13 +18,16 @@ namespace Api.Controllers
         private readonly ITokenService _tokenService;
         private readonly SignInManager<AppUser> _signInManager;
         private readonly IMapper _mapper;
+        private readonly IRefreshTokenService _rts;
 
-        public AccountController(UserManager<AppUser> userManeger, ITokenService tokenService, SignInManager<AppUser> signInManager, IMapper mapper)
+        public AccountController(UserManager<AppUser> userManeger, ITokenService tokenService,
+            SignInManager<AppUser> signInManager, IMapper mapper, IRefreshTokenService rts)
         {
             _userManager = userManeger;
             _tokenService = tokenService;
             _signInManager = signInManager;
             _mapper = mapper;
+            _rts = rts;
         }
 
         [HttpPost("login")]
@@ -58,10 +63,41 @@ namespace Api.Controllers
                     dto.Token = _tokenService.CreateToken(appUser);
                     return Ok(dto);
                 }
+
                 return BadRequest(roleResult.Errors);
             }
 
             return StatusCode(500, createdUser.Errors);
         }
+
+        [HttpPost("Refresh")]
+        [AllowAnonymous]
+        public async Task<IActionResult> Refresh([FromBody] RefreshRequestDto dto)
+        {
+            var ip = GetIpAddress();
+            var (access, refresh) = await _rts.RotateAsync(dto.RefreshToken, ip);
+
+            var response = new AuthResponseDto
+            {
+                AccessToken = access,
+                RefreshToken = refresh.Token,
+                RefreshTokenExpires = refresh.Expires
+            };
+
+            return Ok(response);
+        }
+
+        [HttpPost("Revoke")]
+        [Authorize]
+        public async Task<IActionResult> Revoke([FromBody] RefreshRequestDto dto)
+        {
+            var ip = GetIpAddress();
+
+            await _rts.RevokeAsync(dto.RefreshToken, ip, "User revoked");
+
+            return NoContent();
+        }
     }
 }
+    
+

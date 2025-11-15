@@ -1,12 +1,15 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
+using Api.Interfaces.IRepo;
 
-namespace Api.Interfaces
+namespace Api.Interfaces.IService;
+
+public interface IUnitOfWork
 {
-    public interface IUnitOfWork
-    {
-        Task<int> SaveChangesAsync(CancellationToken ct = default);
-    }
+    IStockRepo Stocks { get; }
+    ICommentRepo Comments { get; }
+    IPortfolioRepo Portfolios { get; }
+    IRefreshTokenRepo RefreshTokens { get; }
+
+    Task<int> SaveChangesAsync(CancellationToken ct = default);
 }

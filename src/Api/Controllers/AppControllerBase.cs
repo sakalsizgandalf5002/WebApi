@@ -14,5 +14,7 @@ namespace Api.Controllers
         protected CancellationToken Ct => HttpContext.RequestAborted;
         protected string? UserId => User.GetUserId();
 
+        protected string GetIpAddress()
+            => HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
     }
 }

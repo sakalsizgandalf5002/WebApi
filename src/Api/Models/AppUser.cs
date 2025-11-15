@@ -9,6 +9,6 @@ namespace Api.Models
     public class AppUser : IdentityUser
     {
         public List<Portfolio> Portfolios { get; set; } = new List<Portfolio>();
-    
+        public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
     }
 }

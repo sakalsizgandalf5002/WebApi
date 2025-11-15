@@ -19,11 +19,13 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Text.Json;
+using System.Threading.RateLimiting;
 using Api.Interfaces.IRepo;
 using Api.Interfaces.IService;
+using Api.Middleware;
+using Api.Options;
 
 
-// Serilog bootstrap
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(new ConfigurationBuilder()
         .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
@@ -38,7 +40,39 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Host.UseSerilog((ctx, lc) => lc.ReadFrom.Configuration(ctx.Configuration));
 
 
-// Services
+builder.Services.AddOptions<JwtOptions>()
+    .Bind(builder.Configuration.GetSection("JWT"))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
+var allowed = (builder.Configuration["ALLOWED_ORIGINS"] ?? "")
+    .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+builder.Services.AddCors(opt =>
+{
+    opt.AddPolicy("Default", p =>
+    {
+        if (allowed.Length > 0)
+            p.WithOrigins(allowed).AllowAnyHeader().AllowAnyMethod();
+        else
+            p.WithOrigins("http://localhost:5173", "http://localhost:3000")
+                .AllowAnyHeader().AllowAnyMethod();
+    });
+});
+
+builder.Services.AddRateLimiter(o =>
+{
+    o.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(ctx =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: ctx.Connection.RemoteIpAddress?.ToString() ?? "anon",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            }));
+});
+
 builder.Services.AddDbContext<AppDbContext>(o =>
 {
     var cs = builder.Configuration.GetConnectionString("DefaultConnection")
@@ -65,6 +99,36 @@ builder.Services
     .AddEntityFrameworkStores<AppDbContext>()
     .AddSignInManager();
 
+builder.Services.AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme    = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultScheme             = JwtBearerDefaults.AuthenticationScheme;
+    })
+    .AddJwtBearer(o =>
+    {
+        var key = builder.Configuration["JWT:SigningKey"];
+        if (string.IsNullOrWhiteSpace(key))
+            throw new InvalidOperationException("JWT:SigningKey not configured.");
+
+        o.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateIssuerSigningKey = true,
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.Zero,
+            ValidIssuer = builder.Configuration["JWT:Issuer"],
+            ValidAudience = builder.Configuration["JWT:Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key))
+        };
+    });
+
+builder.Services.AddAuthorization(o =>
+{
+    o.AddPolicy("RequireAdmin", p => p.RequireRole("Admin"));
+});
+
 builder.Services.AddAutoMapper(
     cfg => { },
     typeof(Program).Assembly,
@@ -76,6 +140,7 @@ builder.Services.AddAutoMapper(
 builder.Services.AddScoped<IStockRepo, StockRepo>();
 builder.Services.AddScoped<ICommentRepo, CommentRepo>();
 builder.Services.AddScoped<IPortfolioRepo, PortfolioRepo>();
+builder.Services.AddScoped<IRefreshTokenRepo, RefreshTokenRepo>();
 
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
@@ -83,30 +148,11 @@ builder.Services.AddScoped<IStockService, StockService>();
 builder.Services.AddScoped<ICommentService,  CommentService>();
 builder.Services.AddScoped<IPortfolioService, PortfolioService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
 
 builder.Services.Configure<PepperedPasswordHasher.Options>(builder.Configuration.GetSection("Security"));
 builder.Services.AddScoped<IPasswordHasher<AppUser>, PepperedPasswordHasher>();
 
-builder.Services.AddAuthentication(options =>
-    {
-        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-        options.DefaultChallengeScheme    = JwtBearerDefaults.AuthenticationScheme;
-        options.DefaultScheme             = JwtBearerDefaults.AuthenticationScheme;
-    })
-    .AddJwtBearer(o =>
-    {
-        o.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateIssuerSigningKey = true,
-            ValidateLifetime = true,
-            ClockSkew = TimeSpan.Zero,
-            ValidIssuer = builder.Configuration["JWT:Issuer"],
-            ValidAudience = builder.Configuration["JWT:Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JWT:SigningKey"]))
-        };
-    });
 builder.Services.AddControllers().AddNewtonsoftJson(x =>
     x.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore);
 
@@ -135,6 +181,21 @@ builder.Services.AddHealthChecks()
 
 var app = builder.Build();
 
+app.UseApiExceptionMiddleware();
+
+if (!app.Environment.IsDevelopment())
+    app.UseHsts();
+app.UseHttpsRedirection();
+
+app.Use ((ctx, next) =>
+{
+    ctx.Response.Headers["X-Content-Type-Options"] = "nosniff";
+    ctx.Response.Headers["X-Frame-Options"] = "DENY";
+    ctx.Response.Headers["Referrer-Policy"] = "no-referrer";
+    ctx.Response.Headers["Permission-Policy"] = "geolocation=()";
+    return next();
+});
+
 app.Use(async (ctx, next) =>
 {
     var reqId = ctx.Request.Headers.TryGetValue("X-Request-ID", out var h) && !string.IsNullOrWhiteSpace(h)
@@ -161,8 +222,18 @@ app.UseSerilogRequestLogging(o =>
     {
         dc.Set("ClientIp", http.Connection.RemoteIpAddress?.ToString() ?? "unknown");
         dc.Set("QueryString", http.Request.QueryString.HasValue ? http.Request.QueryString.Value : "");
+        if (http.Request.Headers.ContainsKey("Authorization"))
+            dc.Set("Authorization", "redacted");
     };
 });
+
+app.UseCors("Default");
+app.UseRateLimiter();
+
+
+app.UseAuthentication();
+app.UseAuthorization();
+app.MapControllers();
 
 if (app.Environment.IsDevelopment())
 {
@@ -170,11 +241,6 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
     app.UseRewriter(new RewriteOptions().AddRedirect("^$", "swagger", 302));
 }
-
-
-app.UseAuthentication();
-app.UseAuthorization();
-app.MapControllers();
 
 static Task HealthWrite(HttpContext ctx, HealthReport rep)
 {

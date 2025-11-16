@@ -31,49 +31,68 @@ namespace Api.Controllers
         }
 
         [HttpPost("login")]
+        [AllowAnonymous]
         public async Task<IActionResult> Login([FromBody] LoginDto loginDto)
         {
-            var user = await _userManager.Users.FirstOrDefaultAsync(x => x.UserName == loginDto.Username.ToLower());
-            if (user == null) return Unauthorized("Invalid username!");
-
+            if (!ModelState.IsValid)
+                return ValidationProblem(ModelState);
+            
+            var user = await _userManager.Users
+                .FirstOrDefaultAsync(x => x.UserName == loginDto.Username.ToLower());
+            
+            if (user == null)
+                return Unauthorized("Invalid username or password");
+            
             var result = await _signInManager.CheckPasswordSignInAsync(user, loginDto.Password, false);
-            if (!result.Succeeded) return Unauthorized("Username not found or invalid password!");
-
+            if (!result.Succeeded)
+                return Unauthorized("Invalid username or password");
+            
             var dto = _mapper.Map<NewUserDto>(user);
             dto.Token = _tokenService.CreateToken(user);
             return Ok(dto);
         }
 
         [HttpPost("register")]
+        [AllowAnonymous]
         public async Task<IActionResult> Register([FromBody] RegisterDto registerDto)
         {
+            if (!ModelState.IsValid)
+                return ValidationProblem(ModelState);
+
             var appUser = new AppUser
             {
                 UserName = registerDto.Username,
-                Email = registerDto.Email
+                Email = registerDto.Email,
             };
-
+            
             var createdUser = await _userManager.CreateAsync(appUser, registerDto.Password);
-            if (createdUser.Succeeded)
+
+            if (!createdUser.Succeeded)
             {
-                var roleResult = await _userManager.AddToRoleAsync(appUser, "User");
-                if (roleResult.Succeeded)
-                {
-                    var dto = _mapper.Map<NewUserDto>(appUser);
-                    dto.Token = _tokenService.CreateToken(appUser);
-                    return Ok(dto);
-                }
-
-                return BadRequest(roleResult.Errors);
+                var errors = createdUser.Errors.Select(x => x.Description);
+                return BadRequest(new { errors });
             }
-
-            return StatusCode(500, createdUser.Errors);
+            
+            var roleResult = await _userManager.AddToRoleAsync(appUser, "User");
+            
+            if (!roleResult.Succeeded)
+            {
+                var errors = roleResult.Errors.Select(x => x.Description);
+                return StatusCode(500, new { errors });
+            }
+            
+            var dto = _mapper.Map<NewUserDto>(appUser);
+            dto.Token = _tokenService.CreateToken(appUser);
+            return Ok(dto);
         }
 
         [HttpPost("Refresh")]
         [AllowAnonymous]
         public async Task<IActionResult> Refresh([FromBody] RefreshRequestDto dto)
         {
+            if (!ModelState.IsValid)
+                return ValidationProblem(ModelState);
+            
             var ip = GetIpAddress();
             var (access, refresh) = await _rts.RotateAsync(dto.RefreshToken, ip);
 
@@ -91,6 +110,9 @@ namespace Api.Controllers
         [Authorize]
         public async Task<IActionResult> Revoke([FromBody] RefreshRequestDto dto)
         {
+            if (!ModelState.IsValid)
+                return ValidationProblem(ModelState);
+            
             var ip = GetIpAddress();
 
             await _rts.RevokeAsync(dto.RefreshToken, ip, "User revoked");

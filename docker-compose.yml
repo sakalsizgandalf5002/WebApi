@@ -34,6 +34,7 @@ services:
       - JWT__Issuer=${JWT_ISSUER}
       - JWT__Audience=${JWT_AUDIENCE}
       - JWT__SigningKey=${JWT_SIGNING_KEY}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
     ports:
       - "8080:8080"
 

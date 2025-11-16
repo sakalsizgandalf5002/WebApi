@@ -24,6 +24,9 @@ using Api.Interfaces.IRepo;
 using Api.Interfaces.IService;
 using Api.Middleware;
 using Api.Options;
+using Api.Validators.Comment;
+using FluentValidation;
+using FluentValidation.AspNetCore;
 
 
 Log.Logger = new LoggerConfiguration()
@@ -154,8 +157,9 @@ builder.Services.Configure<PepperedPasswordHasher.Options>(builder.Configuration
 builder.Services.AddScoped<IPasswordHasher<AppUser>, PepperedPasswordHasher>();
 
 builder.Services.AddControllers().AddNewtonsoftJson(x =>
-    x.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore);
-
+        x.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore)
+    .AddFluentValidation(fv => { });
+builder.Services.AddValidatorsFromAssemblyContaining<CreateCommentDtoValidator>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {

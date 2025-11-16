@@ -8,7 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Api.DTOs.Stock;
 using Api.Helpers;
-using Api.Interfaces;
+using Api.Interfaces.IService;
 using Api.Interfaces.IRepo;
 using Api.Models;
 using Api.Service;

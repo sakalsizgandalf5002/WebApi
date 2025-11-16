@@ -42,6 +42,9 @@ namespace Api.Controllers
         [HttpPost("{stockId:int}")]
         public async Task<IActionResult> Create([FromRoute] int stockId, [FromBody] CreateCommentDto dto, CancellationToken ct)
         {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+            
             var user = await GetCurrentUserAsync();
             if (user == null) return Unauthorized();
 
@@ -55,14 +58,17 @@ namespace Api.Controllers
         [HttpPut("{id:int}")]
         public async Task<IActionResult> Update([FromRoute] int id, [FromBody] UpdateCommentRequestDto dto, CancellationToken ct)
         {
-           var user = await GetCurrentUserAsync();
-           if (user == null) return Unauthorized();
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+            
+            var user = await GetCurrentUserAsync();
+            if (user == null) return Unauthorized();
 
-           var res = await _service.UpdateAsync(id, dto, user.Id, ct);
-           if (!res.Success && res.Message == "not_found") return NotFound();
-           if (!res.Success && res.Message == "forbidden") return Forbid();
+            var res = await _service.UpdateAsync(id, dto, user.Id, ct);
+            if (!res.Success && res.Message == "not_found") return NotFound();
+            if (!res.Success && res.Message == "forbidden") return Forbid();
 
-           return Ok(res.Data);
+            return Ok(res.Data);
         }
 
         [Authorize]

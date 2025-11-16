@@ -7,6 +7,9 @@ TestResults/
 .vs/
 .vscode/
 *.user
+.DS_Store
+.idea/
+*.DotSettings.user
 *.suo
 
 

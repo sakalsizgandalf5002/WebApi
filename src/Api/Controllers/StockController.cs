@@ -45,6 +45,9 @@ namespace Api.Controllers
         [Consumes("application/json")]
         public async Task<IActionResult> Create([FromBody] CreateStockRequestDto dto, CancellationToken ct)
         {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+            
             if (string.IsNullOrWhiteSpace(UserId)) return Unauthorized();
             var result = await _stockService.CreateAsync(dto, UserId, ct);
             if (!result.Success) return BadRequest(result.Message);
@@ -55,6 +58,9 @@ namespace Api.Controllers
         [Authorize]
         public async Task<IActionResult> Update([FromRoute] int id, [FromBody] UpdateStockRequestDto dto, CancellationToken ct)
         {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+            
             if (string.IsNullOrWhiteSpace(UserId)) return Unauthorized();
             var result = await _stockService.UpdateAsync(id, dto, UserId, ct);
             if (!result.Success) return NotFound(result.Message);

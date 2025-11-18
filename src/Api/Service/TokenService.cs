@@ -1,26 +1,26 @@
-using System;
-using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
-using System.Linq;
 using System.Security.Claims;
 using System.Text;
-using System.Threading.Tasks;
-using Api.Interfaces;
+using Api.Interfaces.IService;
 using Api.Models;
+using Api.Options;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
 namespace Api.Service
 {
     public class TokenService : ITokenService
     {
-        private readonly IConfiguration _config;
+        private readonly JwtOptions _jwt;
         private readonly SymmetricSecurityKey _key;
         private readonly UserManager<AppUser> _userManager;
-        public TokenService(IConfiguration config, UserManager<AppUser> userManager)
+
+        public TokenService(IOptions<JwtOptions> jwtOptions, UserManager<AppUser> userManager)
         {
-            _config = config;
-            _key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["JWT:SigningKey"]));
+            _jwt = jwtOptions.Value;
+            _userManager = userManager;
+            _key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwt.SigningKey));
         }
         public string CreateToken(AppUser user)
         {
@@ -41,11 +41,10 @@ namespace Api.Service
             {
                 Subject = new ClaimsIdentity(claims),
                 NotBefore = DateTime.UtcNow,
-                Expires = DateTime.UtcNow.AddMinutes(15),
-                
+                Expires = DateTime.UtcNow.AddMinutes(_jwt.AccessTokenMinutes),
                 SigningCredentials = creds,
-                Issuer = _config["JWT:Issuer"],
-                Audience = _config["JWT:Audience"]
+                Issuer = _jwt.Issuer,
+                Audience = _jwt.Audience
             };
             var tokenHandler = new JwtSecurityTokenHandler();
 

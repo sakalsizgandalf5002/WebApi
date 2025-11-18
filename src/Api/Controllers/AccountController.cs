@@ -34,9 +34,6 @@ namespace Api.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> Login([FromBody] LoginDto loginDto)
         {
-            if (!ModelState.IsValid)
-                return ValidationProblem(ModelState);
-            
             var user = await _userManager.Users
                 .FirstOrDefaultAsync(x => x.UserName == loginDto.Username.ToLower());
             
@@ -56,9 +53,6 @@ namespace Api.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> Register([FromBody] RegisterDto registerDto)
         {
-            if (!ModelState.IsValid)
-                return ValidationProblem(ModelState);
-
             var appUser = new AppUser
             {
                 UserName = registerDto.Username,
@@ -88,13 +82,10 @@ namespace Api.Controllers
 
         [HttpPost("Refresh")]
         [AllowAnonymous]
-        public async Task<IActionResult> Refresh([FromBody] RefreshRequestDto dto)
+        public async Task<IActionResult> Refresh([FromBody] RefreshRequestDto dto, CancellationToken ct)
         {
-            if (!ModelState.IsValid)
-                return ValidationProblem(ModelState);
-            
             var ip = GetIpAddress();
-            var (access, refresh) = await _rts.RotateAsync(dto.RefreshToken, ip);
+            var (access, refresh) = await _rts.RotateAsync(dto.RefreshToken, ip, ct);
 
             var response = new AuthResponseDto
             {
@@ -108,14 +99,11 @@ namespace Api.Controllers
 
         [HttpPost("Revoke")]
         [Authorize]
-        public async Task<IActionResult> Revoke([FromBody] RefreshRequestDto dto)
+        public async Task<IActionResult> Revoke([FromBody] RefreshRequestDto dto,  CancellationToken ct)
         {
-            if (!ModelState.IsValid)
-                return ValidationProblem(ModelState);
-            
             var ip = GetIpAddress();
 
-            await _rts.RevokeAsync(dto.RefreshToken, ip, "User revoked");
+            await _rts.RevokeAsync(dto.RefreshToken, ip, "User revoked", ct);
 
             return NoContent();
         }

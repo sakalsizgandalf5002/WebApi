@@ -1,13 +1,8 @@
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Collections.Generic;
 using Api.Data;
 using Api.Helpers;
 using Api.Interfaces.IRepo;
 using Api.Models;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace Api.Repo;
 

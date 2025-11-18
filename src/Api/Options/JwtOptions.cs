@@ -10,5 +10,8 @@ public sealed class JwtOptions
     public string Audience  { get; init; } = default!;
     [Required, MinLength(64)]
     public string SigningKey { get; init; } = default!;
-    
+
+    public int AccessTokenMinutes { get; init; } = 15;
+    public int RefreshTokenDays { get; init; } = 7;
+
 }

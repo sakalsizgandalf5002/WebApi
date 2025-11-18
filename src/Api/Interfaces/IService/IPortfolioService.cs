@@ -10,8 +10,8 @@ namespace Api.Interfaces.IService
 {
     public interface IPortfolioService
     {
-        Task<Result<IReadOnlyList<StockDto>>> GetUserPortfolioAsync(AppUser user, CancellationToken ct);
-        Task<Result<bool>> AddAsync(AppUser user, string symbol, CancellationToken ct);
-        Task<Result<bool>> RemoveAsync(AppUser user, string symbol, CancellationToken ct);
+        Task<Result<IReadOnlyList<StockDto>>> GetUserPortfolioAsync(string? userId, CancellationToken ct);
+        Task<Result<bool>> AddAsync(string? userId, string symbol, CancellationToken ct);
+        Task<Result<bool>> RemoveAsync(string? userId, string symbol, CancellationToken ct);
     }
 }

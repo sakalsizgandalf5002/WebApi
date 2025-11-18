@@ -11,8 +11,8 @@ public class DesignTimeFactory : IDesignTimeDbContextFactory<AppDbContext>
         
         var config = new ConfigurationBuilder()
             .SetBasePath(Directory.GetCurrentDirectory())
-            .AddJsonFile("appsettings.Json", optional: true)
-            .AddJsonFile($"appsetting.{env}.json", optional: true)
+            .AddJsonFile("appsettings.json", optional: true)
+            .AddJsonFile($"appsettings.{env}.json", optional: true)
             .AddEnvironmentVariables()
             .Build();
         

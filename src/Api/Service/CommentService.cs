@@ -1,9 +1,5 @@
-using System;
 using Api.DTOs.Comment;
 using Api.Helpers;
-using Api.Interfaces;
-using Api.Models;
-using Api.DomainLogs;
 using Api.Interfaces.IRepo;
 using AutoMapper;
 using Api.Interfaces.IService;
@@ -49,7 +45,7 @@ namespace Api.Service
             return Result<CommentDto>.Ok(_mapper.Map<CommentDto>(e));
         }
 
-        public async Task<Result<CommentDto>> CreateAsync(CreateCommentDto dto, string userId, int stockId, CancellationToken ct)
+        public async Task<Result<CommentDto>> CreateAsync(CreateCommentDto dto, string? userId, int stockId, CancellationToken ct)
         {
             if (string.IsNullOrWhiteSpace(userId))
                 return Result<CommentDto>.Fail("unauthorized");
@@ -66,7 +62,7 @@ namespace Api.Service
             return Result<CommentDto>.Ok(_mapper.Map<CommentDto>(created));
         }
 
-        public async Task<Result<CommentDto>> UpdateAsync(int id, UpdateCommentRequestDto dto, string userId, CancellationToken ct)
+        public async Task<Result<CommentDto>> UpdateAsync(int id, UpdateCommentRequestDto dto, string? userId, CancellationToken ct)
         {
             if (string.IsNullOrWhiteSpace(userId))
                 return Result<CommentDto>.Fail("unauthorized");
@@ -86,16 +82,13 @@ namespace Api.Service
 
             _mapper.Map(dto, existing);
 
-            // Repo UpdateAsync kullanıyorsan çağır ama dönüşünü umursama; tracked entity zaten güncel.
-            // await _repo.UpdateAsync(id, existing, ct);
-
             await _uow.SaveChangesAsync(ct);
 
             CommentLogs.CommentUpdated(_logger, existing.Id, userId);
             return Result<CommentDto>.Ok(_mapper.Map<CommentDto>(existing));
         }
 
-        public async Task<Result<bool>> DeleteAsync(int id, string userId, CancellationToken ct)
+        public async Task<Result<bool>> DeleteAsync(int id, string? userId, CancellationToken ct)
         {
             if (string.IsNullOrWhiteSpace(userId))
                 return Result<bool>.Fail("unauthorized");

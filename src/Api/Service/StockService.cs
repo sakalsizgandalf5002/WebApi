@@ -1,16 +1,9 @@
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Collections.Generic;
 using Api.DTOs;
 using Api.DTOs.Stock;
-using Api.DomainLogs;
 using Api.Helpers;
-using Api.Interfaces;
 using Api.Interfaces.IRepo;
 using Api.Interfaces.IService;
 using AutoMapper;
-using Microsoft.Extensions.Logging;
 
 namespace Api.Service;
 
@@ -55,12 +48,15 @@ public class StockService : IStockService
         }
     }
 
-    public async Task<Result<StockDto>> CreateAsync(CreateStockRequestDto dto, string userId, CancellationToken ct)
+    public async Task<Result<StockDto>> CreateAsync(CreateStockRequestDto dto, string? userId, CancellationToken ct)
     {
-        var entity = _mapper.Map<Api.Models.Stock>(dto);
+        var entity = _mapper.Map<Models.Stock>(dto);
         await _repo.CreateAsync(entity, ct);
         await _uow.SaveChangesAsync(ct);
-        StockLogs.StockCreated(_logger, entity.Symbol, userId);
+
+        var uid = userId ?? "anon";
+        StockLogs.StockCreated(_logger, entity.Symbol, uid);
+
         return Result<StockDto>.Ok(_mapper.Map<StockDto>(entity));
     }
 
@@ -95,7 +91,7 @@ public class StockService : IStockService
         }
     }
 
-    public async Task<Result<bool>> DeleteAsync(int id, string userId, CancellationToken ct)
+    public async Task<Result<bool>> DeleteAsync(int id, string? userId, CancellationToken ct)
     {
         var entity = await _repo.GetByIdAsync(id, ct);
         if (entity is null)
@@ -107,7 +103,9 @@ public class StockService : IStockService
         await _repo.DeleteAsync(entity, ct);
         await _uow.SaveChangesAsync(ct);
 
-        StockLogs.StockDeleted(_logger, entity.Id, userId);
+        var uid = userId ?? "anon";
+        StockLogs.StockDeleted(_logger, entity.Id, uid);
+
         return Result<bool>.Ok(true);
     }
 

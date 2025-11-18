@@ -1,7 +1,6 @@
-using System.Threading;
-using System.Threading.Tasks;
 using Api.DTOs;
 using Api.DTOs.Stock;
+using Api.Extensions;
 using Api.Helpers;
 using Api.Interfaces.IService;
 using Microsoft.AspNetCore.Authorization;
@@ -19,25 +18,24 @@ namespace Api.Controllers
         [HttpGet]
         public async Task<IActionResult> Get([FromQuery] QueryObject query, CancellationToken ct)
         {
-            var result = await _stockService.QueryAsync(query, ct);
-            if (!result.Success) return BadRequest(result.Message);
-            return Ok(result.Data);
+            var res = await _stockService.QueryAsync(query, ct);
+            return res.ToActionResult();
         }
 
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetById([FromRoute] int id, CancellationToken ct)
         {
-            var result = await _stockService.GetByIdAsync(id, ct);
-            if (!result.Success) return NotFound(result.Message);
-            return Ok(result.Data);
+            var res = await _stockService.GetByIdAsync(id, ct);
+            return res.ToActionResult();
+
         }
 
         [HttpGet("symbol/{symbol}")]
         public async Task<IActionResult> GetBySymbol([FromRoute] string symbol, CancellationToken ct)
         {
-            var result = await _stockService.GetBySymbolAsync(symbol, ct);
-            if (!result.Success) return NotFound(result.Message);
-            return Ok(result.Data);
+            var res = await _stockService.GetBySymbolAsync(symbol, ct);
+            return res.ToActionResult();
+
         }
 
         [HttpPost]
@@ -45,36 +43,26 @@ namespace Api.Controllers
         [Consumes("application/json")]
         public async Task<IActionResult> Create([FromBody] CreateStockRequestDto dto, CancellationToken ct)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-            
-            if (string.IsNullOrWhiteSpace(UserId)) return Unauthorized();
-            var result = await _stockService.CreateAsync(dto, UserId, ct);
-            if (!result.Success) return BadRequest(result.Message);
-            return Ok(result.Data);
+           var res =  await _stockService.CreateAsync(dto, UserId, ct);
+           return res.ToActionResult();
         }
 
         [HttpPut("{id:int}")]
         [Authorize]
         public async Task<IActionResult> Update([FromRoute] int id, [FromBody] UpdateStockRequestDto dto, CancellationToken ct)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-            
-            if (string.IsNullOrWhiteSpace(UserId)) return Unauthorized();
-            var result = await _stockService.UpdateAsync(id, dto, UserId, ct);
-            if (!result.Success) return NotFound(result.Message);
-            return Ok(result.Data);
+           var res = await _stockService.UpdateAsync(id, dto, UserId, ct);
+           return res.ToActionResult();
         }
 
-        [HttpDelete("{id:int}")]
         [Authorize]
-        public async Task<IActionResult> Delete([FromRoute] int id, CancellationToken ct)
+        [HttpDelete("{id:int}")]
+        public async Task<IActionResult> Delete(int id, CancellationToken ct)
         {
-            if (string.IsNullOrWhiteSpace(UserId)) return Unauthorized();
-            var result = await _stockService.DeleteAsync(id, UserId, ct);
-            if (!result.Success) return NotFound(result.Message);
-            return NoContent();
+           
+                var res = await _stockService.DeleteAsync(id, UserId, ct);
+                return res.ToActionResult();
+            
         }
     }
 }

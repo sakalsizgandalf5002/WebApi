@@ -7,8 +7,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Api.Controllers
 {
-    [ApiController]
-    [Route("api/[controller]")]
     public abstract class AppControllerBase : ControllerBase
     {
         protected CancellationToken Ct => HttpContext.RequestAborted;

@@ -1,32 +1,38 @@
+using System;
+using System.IO;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
+using Microsoft.Extensions.Configuration;
 
-namespace Api.Data;
-
-public class DesignTimeFactory : IDesignTimeDbContextFactory<AppDbContext>
+namespace Api.Data
 {
-    public AppDbContext CreateDbContext(string[] args)
+    public class DesignTimeFactory : IDesignTimeDbContextFactory<AppDbContext>
     {
-        var env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development";
-        
-        var config = new ConfigurationBuilder()
-            .SetBasePath(Directory.GetCurrentDirectory())
-            .AddJsonFile("appsettings.json", optional: true)
-            .AddJsonFile($"appsettings.{env}.json", optional: true)
-            .AddEnvironmentVariables()
-            .Build();
-        
-        var cs = config.GetConnectionString("DefaultConnection")
-                 ?? Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
+        public AppDbContext CreateDbContext(string[] args)
+        {
+            var env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development";
 
-        if (string.IsNullOrWhiteSpace(cs))
-            throw new InvalidOperationException(
-                "No connection string found. Provide it via appsettings.Development.json, user-secrets, or environment variables.");
+            var config = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: false)
+                .AddJsonFile($"appsettings.{env}.json", optional: true, reloadOnChange: false)
+                .AddUserSecrets<Program>(optional: true)      
+                .AddEnvironmentVariables()                  
+                .Build();
 
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlServer(cs)
-            .Options;
+            var cs =
+                config.GetConnectionString("DefaultConnection") ??
+                Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
 
-        return new AppDbContext(options);
+            if (string.IsNullOrWhiteSpace(cs))
+                throw new InvalidOperationException(
+                    "No connection string found. Provide it via appsettings.Development.json, user-secrets, or environment variables.");
+
+            var options = new DbContextOptionsBuilder<AppDbContext>()
+                .UseSqlServer(cs)
+                .Options;
+
+            return new AppDbContext(options);
+        }
     }
 }

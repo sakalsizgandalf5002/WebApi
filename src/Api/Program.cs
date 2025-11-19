@@ -1,4 +1,3 @@
-using System.Reflection;
 using Serilog;
 using Serilog.Events;
 using Microsoft.OpenApi.Models;
@@ -10,10 +9,8 @@ using Api.Data;
 using Api.Models;
 using Api.Service;
 using Api.Repo;
-using Api.Interfaces;
 using Api.Security;
 using Api.Mappers;
-using AutoMapper;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -27,14 +24,16 @@ using Api.Options;
 using Api.Validators.Comment;
 using FluentValidation;
 using FluentValidation.AspNetCore;
-using DotNetEnv;
 
-Env.Load();
+var tempConfig = new ConfigurationBuilder()
+    .AddUserSecrets<Program>(optional: true)
+    .Build();
 
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(new ConfigurationBuilder()
         .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-        .AddJsonFile($"appsettings.Development.json", optional: true)
+        .AddJsonFile("appsettings.Development.json", optional: true)
+        .AddUserSecrets<Program>(optional: true)
         .AddEnvironmentVariables()
         .Build())
     .Enrich.FromLogContext()
@@ -42,11 +41,7 @@ Log.Logger = new LoggerConfiguration()
     .CreateLogger();
 
 var builder = WebApplication.CreateBuilder(args);
-
-builder.Host.ConfigureAppConfiguration(config =>
-{
-    config.AddEnvironmentVariables();
-});
+builder.Configuration.AddUserSecrets<Program>(optional: true);
 
 builder.Host.UseSerilog((ctx, lc) => lc.ReadFrom.Configuration(ctx.Configuration));
 
@@ -74,14 +69,25 @@ builder.Services.AddCors(opt =>
 builder.Services.AddRateLimiter(o =>
 {
     o.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(ctx =>
-        RateLimitPartition.GetFixedWindowLimiter(
+    {
+        var path = ctx.Request.Path.Value ?? string.Empty;
+
+        if (path.StartsWith("/swagger", StringComparison.OrdinalIgnoreCase) ||
+            path.StartsWith("/health", StringComparison.OrdinalIgnoreCase) ||
+            path.StartsWith("/favicon", StringComparison.OrdinalIgnoreCase))
+        {
+            return RateLimitPartition.GetNoLimiter("infra");
+        }
+
+        return RateLimitPartition.GetFixedWindowLimiter(
             partitionKey: ctx.Connection.RemoteIpAddress?.ToString() ?? "anon",
             factory: _ => new FixedWindowRateLimiterOptions
             {
-                PermitLimit = 10,
+                PermitLimit = 60,               
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0
-            }));
+            });
+    });
 });
 
 builder.Services.AddDbContext<AppDbContext>(o =>
@@ -291,7 +297,6 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = r => r
 
 try
 {
-    Log.Information("Starting WebApi on http://localhost:5254 and https://localhost:7254");
     app.Run();
 }
 catch (Exception ex)

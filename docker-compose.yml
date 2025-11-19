@@ -29,12 +29,15 @@ services:
       - seq
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Server=db,1433;Database=WebApi;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True
+      - ConnectionStrings__DefaultConnection=Server=db,1433;Database=Portfolio;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True
       - Serilog__WriteTo__1__Args__serverUrl=http://seq:80
       - JWT__Issuer=${JWT_ISSUER}
       - JWT__Audience=${JWT_AUDIENCE}
       - JWT__SigningKey=${JWT_SIGNING_KEY}
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
+      - Security__Pepper=${SECURITY_PEPPER}
+
+
     ports:
       - "8080:8080"
 

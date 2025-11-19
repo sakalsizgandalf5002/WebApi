@@ -1,5 +1,4 @@
 using Api.DTOs.Account;
-using Api.Interfaces;
 using Api.Interfaces.IService;
 using Api.Models;
 using AutoMapper;

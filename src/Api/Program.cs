@@ -27,7 +27,9 @@ using Api.Options;
 using Api.Validators.Comment;
 using FluentValidation;
 using FluentValidation.AspNetCore;
+using DotNetEnv;
 
+Env.Load();
 
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(new ConfigurationBuilder()
@@ -40,6 +42,12 @@ Log.Logger = new LoggerConfiguration()
     .CreateLogger();
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Host.ConfigureAppConfiguration(config =>
+{
+    config.AddEnvironmentVariables();
+});
+
 builder.Host.UseSerilog((ctx, lc) => lc.ReadFrom.Configuration(ctx.Configuration));
 
 
@@ -215,17 +223,31 @@ app.Use(async (ctx, next) =>
 
 app.UseSerilogRequestLogging(o =>
 {
-    o.MessageTemplate = "HTTP {RequestMethod} {RequestPath} by {UserId} [{RequestId}] responded {StatusCode} in {Elapsed:0.0000} ms from {ClientIp} {QueryString}";
+    o.MessageTemplate =
+        "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000} ms from {ClientIp} {UserAgent} {QueryString}";
+
     o.GetLevel = (http, elapsed, ex) =>
     {
-        if (ex != null || http.Response.StatusCode >= 500) return LogEventLevel.Error;
-        if (http.Response.StatusCode >= 400) return LogEventLevel.Warning;
-        return app.Environment.IsDevelopment() ? LogEventLevel.Debug : LogEventLevel.Information;
+        if (ex != null || http.Response.StatusCode >= 500)
+            return LogEventLevel.Error;
+
+        if (http.Response.StatusCode == StatusCodes.Status404NotFound)
+            return LogEventLevel.Information;
+
+        if (http.Response.StatusCode >= 400)
+            return LogEventLevel.Warning;
+
+        return app.Environment.IsDevelopment()
+            ? LogEventLevel.Debug
+            : LogEventLevel.Information;
     };
+
     o.EnrichDiagnosticContext = (dc, http) =>
     {
         dc.Set("ClientIp", http.Connection.RemoteIpAddress?.ToString() ?? "unknown");
         dc.Set("QueryString", http.Request.QueryString.HasValue ? http.Request.QueryString.Value : "");
+        dc.Set("UserAgent", http.Request.Headers["User-Agent"].FirstOrDefault() ?? "unknown");
+
         if (http.Request.Headers.ContainsKey("Authorization"))
             dc.Set("Authorization", "redacted");
     };

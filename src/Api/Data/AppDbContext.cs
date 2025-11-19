@@ -50,19 +50,22 @@ namespace Api.Data
                         .OnDelete(DeleteBehavior.Cascade);
                 });
 
-            List<IdentityRole> roles = new List<IdentityRole>
-    {
-        new IdentityRole
-        {
-            Name = "Admin",
-            NormalizedName = "ADMIN"
-        },
-        new IdentityRole
-        {
-            Name = "User",
-            NormalizedName = "USER"
-        },
-    };
+                List<IdentityRole> roles = new List<IdentityRole>
+                {
+                    new IdentityRole
+                    {
+                        Id = "8D12FA6F-9B3A-4AFC-9E35-47DCEF1B1111",
+                        Name = "Admin",
+                        NormalizedName = "ADMIN"
+                    },
+                    new IdentityRole
+                    {
+                        Id = "B9B07E7A-4BB0-4BD9-AEB6-242D2D4B2222",
+                        Name = "User",
+                        NormalizedName = "USER"
+                    },
+                };
+
             builder.Entity<IdentityRole>().HasData(roles);
         }
     }
